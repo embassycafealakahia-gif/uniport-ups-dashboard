@@ -90,7 +90,7 @@ CSV_HEADERS = [
 # --- App State & Manager -----------------------------------------------------
 class SystemState:
     def __init__(self):
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
         self.is_running = False
         self.is_paused = False
         self.stop_requested = False
@@ -503,8 +503,9 @@ def filter_data(data: list[dict], search: str = "", status_filter: str = "ALL", 
 
 # --- API Routes --------------------------------------------------------------
 @app.get("/healthz")
+@app.get("//healthz")
 @app.get("/api/health")
-def health():
+async def health():
     return {"status": "ok", "service": "uniport-ups-checker", "timestamp": time.time()}
 
 
@@ -862,7 +863,7 @@ def delete_history_run(run_id: str):
 
 
 @app.get("/", response_class=HTMLResponse)
-def index():
+async def index():
     html_file = BASE_DIR / "templates" / "index.html"
     if html_file.exists():
         return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
