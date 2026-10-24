@@ -502,9 +502,9 @@ def filter_data(data: list[dict], search: str = "", status_filter: str = "ALL", 
 
 
 # --- API Routes --------------------------------------------------------------
-@app.get("/healthz")
-@app.get("//healthz")
-@app.get("/api/health")
+@app.api_route("/healthz", methods=["GET", "HEAD"])
+@app.api_route("//healthz", methods=["GET", "HEAD"])
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 async def health():
     return {"status": "ok", "service": "uniport-ups-checker", "timestamp": time.time()}
 
