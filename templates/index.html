@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNIPORT Unified Portal System — Admission & Acceptance Verification Dashboard</title>
+  <meta name="description" content="Executive-grade automated dashboard for University of Port Harcourt (UNIPORT) admission acceptance, history tracking, and student clearance retrieval.">
+  
+  <!-- Modern Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="brand-crest">
+          <img src="https://ups.uniport.edu.ng/assets/images/logo1-thumb.png" alt="UNIPORT Crest" onerror="this.src='/static/crest.png'; this.onerror=null;">
+        </div>
+        <div class="brand-info">
+          <div class="brand-title">UNIPORT Unified Portal System</div>
+          <div class="brand-sub">Admission & Acceptance Verification Center • Session 2026/2027</div>
+        </div>
+      </div>
+
+      <div class="header-center">
+        <div class="system-status-pill" id="system-status-pill">
+          <span class="pulse-dot idle" id="status-dot"></span>
+          <span class="status-label" id="status-label">IDLE</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button class="btn btn-secondary" id="btn-open-history" title="View past runs, reruns and redownloads">
+          <i class="ph ph-clock-counter-clockwise"></i> Run History <span class="nav-count-badge" id="history-count-badge">0</span>
+        </button>
+        <button class="btn btn-secondary" id="btn-open-upload" title="Upload or paste JAMB Registration Numbers">
+          <i class="ph ph-upload-simple"></i> Load Reg Numbers
+        </button>
+        <button class="btn btn-secondary" id="btn-open-settings" title="Adjust scrapers and pacing">
+          <i class="ph ph-sliders"></i> Settings
+        </button>
+        <div class="export-dropdown">
+          <button class="btn btn-primary" id="btn-export-menu">
+            <i class="ph ph-download-simple"></i> Export Data <i class="ph ph-caret-down"></i>
+          </button>
+          <div class="dropdown-content" id="export-dropdown-content">
+            <div class="dropdown-header">FILTERED VIEW</div>
+            <a href="#" id="export-filtered-csv"><i class="ph ph-funnel"></i> Filtered Results (CSV)</a>
+            <a href="#" id="export-filtered-json"><i class="ph ph-file-code"></i> Filtered Results (JSON)</a>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-header">ALL RECORDS</div>
+            <a href="/api/export/csv" id="export-csv"><i class="ph ph-file-csv"></i> All Results (CSV)</a>
+            <a href="/api/export/json" id="export-json"><i class="ph ph-file-code"></i> All Results (JSON)</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="app-main">
+      <!-- KPI Stats Grid -->
+      <section class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon-wrapper blue">
+            <i class="ph ph-users-three"></i>
+          </div>
+          <div class="stat-details">
+            <span class="stat-caption">Queue Total</span>
+            <span class="stat-value" id="kpi-total">0</span>
+            <span class="stat-sub" id="kpi-queue-status">0 checked</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrapper emerald">
+            <i class="ph ph-seal-check"></i>
+          </div>
+          <div class="stat-details">
+            <span class="stat-caption">Admitted Students</span>
+            <span class="stat-value highlight-emerald" id="kpi-admitted">0</span>
+            <span class="stat-sub">Offer Granted</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrapper cyan">
+            <i class="ph ph-check-circle"></i>
+          </div>
+          <div class="stat-details">
+            <span class="stat-caption">Accepted Admission</span>
+            <span class="stat-value highlight-cyan" id="kpi-accepted">0</span>
+            <span class="stat-sub">Fee Stage Ready</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrapper amber">
+            <i class="ph ph-hourglass-high"></i>
+          </div>
+          <div class="stat-details">
+            <span class="stat-caption">Not Accepted</span>
+            <span class="stat-value highlight-amber" id="kpi-not-accepted">0</span>
+            <span class="stat-sub">Pending Action</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrapper rose">
+            <i class="ph ph-prohibit"></i>
+          </div>
+          <div class="stat-details">
+            <span class="stat-caption">Login Failed</span>
+            <span class="stat-value highlight-rose" id="kpi-failed">0</span>
+            <span class="stat-sub">Invalid / No Record</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrapper purple">
+            <i class="ph ph-lightning"></i>
+          </div>
+          <div class="stat-details">
+            <span class="stat-caption">Throughput / Speed</span>
+            <span class="stat-value" id="kpi-speed">0/min</span>
+            <span class="stat-sub" id="kpi-eta">ETA: --</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Batch Execution Controller -->
+      <section class="control-deck-card">
+        <div class="control-deck-header">
+          <div class="deck-title-group">
+            <h3><i class="ph ph-cpu"></i> Batch Execution Control</h3>
+            <span class="deck-desc">Manage polite automated checks against Uniport Unified Portal System</span>
+          </div>
+          <div class="deck-actions">
+            <button class="btn btn-success btn-lg" id="btn-start">
+              <i class="ph ph-play"></i> Start Check
+            </button>
+            <button class="btn btn-warning btn-lg" id="btn-pause" disabled>
+              <i class="ph ph-pause"></i> Pause
+            </button>
+            <button class="btn btn-danger btn-lg" id="btn-stop" disabled>
+              <i class="ph ph-stop"></i> Stop
+            </button>
+            <button class="btn btn-outline" id="btn-reset" title="Archives current run to History before clearing">
+              <i class="ph ph-trash"></i> Reset Results
+            </button>
+          </div>
+        </div>
+
+        <div class="progress-section">
+          <div class="progress-labels">
+            <span class="progress-title">Overall Batch Progress (<span id="progress-percent-label">0%</span>)</span>
+            <span class="progress-numbers" id="progress-counts">0 / 0 items</span>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progress-bar-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Quick Single Lookup Bar -->
+      <section class="single-lookup-card">
+        <div class="lookup-inner">
+          <div class="lookup-info">
+            <i class="ph ph-magnifying-glass-plus lookup-icon"></i>
+            <div>
+              <h4>Instant Student Lookup</h4>
+              <p>Enter any JAMB registration number to verify admission, acceptance status, and profile photo instantly.</p>
+            </div>
+          </div>
+          <form class="lookup-form" id="lookup-form">
+            <div class="input-group">
+              <i class="ph ph-identification-badge input-icon"></i>
+              <input type="text" id="single-reg-input" placeholder="e.g. 202660378996II" required autocomplete="off" spellcheck="false">
+            </div>
+            <button type="submit" class="btn btn-primary" id="btn-single-lookup">
+              <i class="ph ph-arrow-right"></i> Check Now
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Split View: Table & Activity Console -->
+      <div class="workspace-split">
+        <!-- Results Table Section -->
+        <section class="table-card">
+          <div class="table-toolbar">
+            <div class="table-search-box">
+              <i class="ph ph-magnifying-glass"></i>
+              <input type="text" id="table-search" placeholder="Search by name, reg number, department, course...">
+            </div>
+
+            <div class="table-filters">
+              <div class="filter-group">
+                <label>Status:</label>
+                <select id="filter-status" class="custom-select">
+                  <option value="ALL">All Statuses</option>
+                  <option value="ADMITTED">Admitted</option>
+                  <option value="ACCEPTED">Accepted Offer</option>
+                  <option value="NOT_ACCEPTED">Not Accepted</option>
+                  <option value="LOGIN_FAILED">Login Failed</option>
+                </select>
+              </div>
+
+              <div class="filter-group">
+                <label>Faculty:</label>
+                <select id="filter-faculty" class="custom-select">
+                  <option value="ALL">All Faculties</option>
+                </select>
+              </div>
+
+              <!-- Quick Filtered CSV Export button -->
+              <button class="btn btn-xs btn-primary" id="btn-quick-download-filtered" title="Download only the records matching current filters">
+                <i class="ph ph-download-simple"></i> Download Filtered CSV
+              </button>
+            </div>
+          </div>
+
+          <!-- Data Table -->
+          <div class="table-responsive">
+            <table class="data-table" id="results-table">
+              <thead>
+                <tr>
+                  <th>Student Profile</th>
+                  <th>Reg Number</th>
+                  <th>Faculty & Course</th>
+                  <th>UTME</th>
+                  <th>Admission Status</th>
+                  <th>Acceptance</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="table-body">
+                <tr>
+                  <td colspan="7" class="empty-state">
+                    <i class="ph ph-tray empty-icon"></i>
+                    <div>No results loaded yet. Start checking or upload registration numbers.</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="table-pagination">
+            <div class="pagination-info" id="pagination-info">Showing 0 of 0 records</div>
+            <div class="pagination-controls">
+              <button class="btn btn-xs btn-secondary" id="btn-prev-page" disabled><i class="ph ph-caret-left"></i> Prev</button>
+              <span class="page-badge" id="current-page-badge">Page 1 of 1</span>
+              <button class="btn btn-xs btn-secondary" id="btn-next-page" disabled>Next <i class="ph ph-caret-right"></i></button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Live Activity Console -->
+        <section class="console-card">
+          <div class="console-header">
+            <div class="console-title">
+              <span class="mac-dot red"></span>
+              <span class="mac-dot yellow"></span>
+              <span class="mac-dot green"></span>
+              <span><i class="ph ph-terminal-window"></i> Live Activity Feed</span>
+            </div>
+            <div class="console-actions">
+              <label class="auto-scroll-toggle">
+                <input type="checkbox" id="auto-scroll-checkbox" checked>
+                <span>Auto-scroll</span>
+              </label>
+              <button class="btn-icon" id="btn-clear-logs" title="Clear console"><i class="ph ph-trash"></i></button>
+            </div>
+          </div>
+          <div class="console-body" id="console-body">
+            <div class="log-entry info">
+              <span class="log-time">[SYSTEM]</span>
+              <span class="log-msg">Dashboard initialized. Ready for batch or live inspection.</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal: Run History & Rerun Manager -->
+  <div class="modal-overlay" id="history-modal">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="ph ph-clock-counter-clockwise"></i> Run History & Persistent Archives
+        </div>
+        <button class="btn-close" id="btn-close-history-modal"><i class="ph ph-x"></i></button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">
+          All previous checks and deleted runs are preserved here. You can download past CSV/JSON files anytime or restore any run to rerun or resume it.
+        </p>
+        <div class="history-list" id="history-list">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-close-history">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Student Profile Details -->
+  <div class="modal-overlay" id="student-modal">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="ph ph-identification-card"></i> Student Admission Clearance Dossier
+        </div>
+        <button class="btn-close" id="btn-close-student-modal"><i class="ph ph-x"></i></button>
+      </div>
+      <div class="modal-body" id="student-modal-body">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Upload / Paste Reg Numbers -->
+  <div class="modal-overlay" id="upload-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="ph ph-upload-simple"></i> Load JAMB Registration Numbers
+        </div>
+        <button class="btn-close" id="btn-close-upload-modal"><i class="ph ph-x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="upload-dropzone" id="upload-dropzone">
+          <i class="ph ph-file-text drop-icon"></i>
+          <p><strong>Click to choose a .txt / .csv file</strong> or drag & drop here</p>
+          <span>One registration number per line</span>
+          <input type="file" id="file-input" accept=".txt,.csv" style="display:none;">
+        </div>
+
+        <div class="or-divider"><span>OR PASTE NUMBERS</span></div>
+
+        <div class="form-group">
+          <textarea id="paste-input" class="custom-textarea" rows="6" placeholder="Paste registration numbers here, one per line...&#10;202660378996II&#10;202662119356FB"></textarea>
+        </div>
+
+        <div class="form-check">
+          <label>
+            <input type="checkbox" id="replace-queue-checkbox">
+            <span>Replace current queue completely (instead of appending new ones)</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-upload">Cancel</button>
+        <button class="btn btn-primary" id="btn-submit-upload"><i class="ph ph-check"></i> Add to Queue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Settings -->
+  <div class="modal-overlay" id="settings-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="ph ph-sliders"></i> Scraper Settings & Pacing
+        </div>
+        <button class="btn-close" id="btn-close-settings-modal"><i class="ph ph-x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Minimum Delay between Requests (seconds):</label>
+          <input type="number" id="setting-min-delay" class="custom-input" step="0.1" min="0.5" max="10" value="1.2">
+          <small>Polite pacing prevents server rate limits.</small>
+        </div>
+        <div class="form-group">
+          <label>Maximum Delay between Requests (seconds):</label>
+          <input type="number" id="setting-max-delay" class="custom-input" step="0.1" min="0.8" max="15" value="2.5">
+          <small>Random jitter between min and max mimics real human browsing.</small>
+        </div>
+        <div class="alert alert-info">
+          <i class="ph ph-info"></i> These settings take effect immediately on current and subsequent runs.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-settings">Cancel</button>
+        <button class="btn btn-primary" id="btn-save-settings"><i class="ph ph-floppy-disk"></i> Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
